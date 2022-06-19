@@ -1,0 +1,316 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[cm]{fullpage}
+\usepackage{fancyhdr}
+\usepackage[ddmmyyyy]{datetime} 
+\usepackage[]{graphicx}
+\usepackage{hhline}
+\usepackage{listings}
+\usepackage{todonotes}
+
+%\renewcommand{\familydefault}{\sfdefault}
+
+\graphicspath{{figures}}
+
+% Settings for listings package
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+\definecolor{altblue}{rgb}{0.0,0.6,1.0}
+\definecolor{lstbg}{gray}{0.9}
+
+\lstset{
+  backgroundcolor=\color{lstbg},
+  % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize\ttfamily,
+  % the size of the fonts that are used for the code
+  breakatwhitespace=true,
+  % sets if automatic breaks should only happen at whitespace
+  breaklines=true,
+  % sets automatic line breaking
+  captionpos=b,
+  % sets the caption-position to bottom
+  commentstyle=\color{mygreen},
+  % comment style
+  deletekeywords={},
+  % if you want to delete keywords from the given language
+  escapeinside={\#*}{*},
+  % if you want to add LaTeX within your code
+  extendedchars=true,
+  % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,
+  % adds a frame around the code
+  keepspaces=true,
+  % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},
+  % keyword style
+  %language=c++,
+  % the language of the code
+  otherkeywords={},
+  % if you want to add more keywords to the set
+  numbers=left,
+  % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,
+  % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray},
+  % the style that is used for the line-numbers
+  rulecolor=\color{black},
+  % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,
+  % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,
+  % underline spaces within strings only
+  showtabs=false,
+  % show tabs within strings adding particular underscores
+  stepnumber=1,
+  % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},
+  % string literal style
+  tabsize=4,
+  % sets default tabsize to 4 spaces
+  title=\lstname
+  % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+\hypersetup{
+	colorlinks=true,
+	urlcolor=blue
+}
+
+\title{\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\\
+\Large ARCHER2-eCSE04-5}
+\author{Jack Betteridge}
+\date{30/4/2022}
+% PI: Dr David A Ham (Imperial College) 
+
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\setlength{\headsep}{5pt}
+\lhead{ \fancyplain{}{} }
+\rhead{ \fancyplain{}{Jack Betteridge} }
+%\lhead[\footnotesize\nouppercase{\leftmark}]{}
+%\rhead[]{\footnotesize\nouppercase{\rightmark}}
+
+\renewcommand{\footrulewidth}{0.4pt}
+\cfoot[-- \thepage\ --]{-- \thepage\ --}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	We summarise the different aspects of Firedrake deployment that we have improved for our HPC users and additional benefits for ARCHER2 users.
+	\begin{enumerate}
+	\item An Spack package has been created for Firedrake many of its dependencies as well as determining a suitable Spack configuration and package workflow for ARCHER2.
+	\item Spindle has been used to greatly improve the load time for Firedrake simulations and a similar approach will benefit other Python applications, or applications utilising shared libraries.
+	\item Firedrake has been containerised for HPC resulting in a Singularity container suitable fro use on ARCHER2.
+\end{enumerate}
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The goal for this project was to make installing and running the Firedrake framework and its many dependencies simple and robust on any HPC platform.
+We are confident in stating that this has been accomplished.
+Whilst there is still maintenance and upkeep of the devised solutions we have achieved what we set out to accomplish in this eCSE.
+
+Namely we have:
+\begin{enumerate}
+	\item Built a Singularity container for ARCHER2
+	\item Optimised launching Firedrake on HPC
+	\item Developed a Spack package for Firedrake
+\end{enumerate} 
+
+We have reordered these accomplishments in what follows to highlight the revised importance compared to the initial proposal.
+Namely that the development of a Spack package for Firedrake was a more complicated undertaking than originally thought, but additionally this work may have a larger impact for a wider range of ARCHER2 users.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Firedrake Spack Package}
+\label{sec:spack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Spack (\url{https://spack.io/}) is a popular choice of package manager for HPC users to install packages with complex dependencies.
+Firedrake previously did not support installation via Sapck, but it is one of the few package managers capable of delivering the fine grained control over build dependencies and is designed with HPC in mind.
+Furthermore, Spack can take advantage of any dependencies already available on a given system, either available through the OS or through the module system.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Previous situation}
+\label{ssec:prev}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Prior to this work the installation path was the same on a HPC system as it would be on any other computer:
+\begin{lstlisting}
+curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/master/scripts/firedrake-install
+python3 firedrake-install
+\end{lstlisting}
+The \verb`firedrake-install` command is a custom written Python script which can take numerous configuration arguments suitable for building Firedrake to the exact user specification.
+
+Command line arguments can be used to specify the MPI distribution, the PETSc build, which BLAS/LAPACK libraries to link against and any other additional packages the user may want to install.
+Much of the work done by this install script was to overcome limitations in each dependency's own build system.
+It is important for Firedrake that everything is built using the same MPI distribution, if the wrong distribution gets initialised by a package, PETSc will not be able to start.
+If \verb`mpi4py` is built against OpenMPI and PETSc uses MPICH, the installation is broken.
+This is quite a common situation for other projects, but for Firedrake things are further complicated by dependencies on Python packages.
+For instance, PETSc and numpy must both be linked against the same BLAS/LAPACK libraries, to prevent a FORTRAN ABI mismatch.
+If PETSc builds against a system install of NETLIB BLAS/LAPACK and numpy uses the OpenBLAS bundled inside a pre-built wheel, again the installation is broken.
+
+Many special configuration cases have been coded into the \verb`firedrake-install` script to ensure that, on as many systems that we know about, the user is left with a working Firedrake installation.
+For the end user the completed installation looks like a Python virtual environment which is self contained as much as possible.
+This is the desktop user experience that we aim to recreate with the Spack package manager for HPC users.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Spack}
+\label{ssec:spack}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Before building Firedrake, Spack needs to be installed and configured to run on on ARCHER2.
+Spack can be installed on any *nix machine, but special care must be taken on a HPC facility to ensure functionality with the rest of the system.
+
+The ``installation'' of Spack is straightforward, it just involves cloning the Spack git repository and calling an activation script.
+It's essential that a working Python interpreter is loaded as Spack is a Python program, the OS Python is not sufficient as it is often out of date and missing key internal components which prevent Spack from working correctly.
+After the activation step any Spack command can be invoked at the command line and users can start installing packages.
+
+However, it is valuable to spend time configuring Spack for the ARCHER2 system.
+One criticism we have of the Spack package manager is the amount of work for a new user to learn and configure the tool.
+
+!!Explain compilers.yaml and packages.yaml!!
+
+Having said all of this, it is possible to have a centrally installed instance of Spack or a centrally managed global Spack configuration (one that is overridden by the user's configuration, if desired).
+Once build configurations have been finalised the Spack settings documented on the Firedrake wiki could be used as the ARCHER2 global configuration.
+Optionally, system modules could also be added to the list of installed packages and could be used by Spack builds to satisfy dependencies.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The \texttt{py-firedrake} package}
+\label{ssec:py-firedrake}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The \href{https://github.com/firedrakeproject/firedrake-spack}{Firedrake spack repository} currently holds all of the additional packages currently required to build Firedrake. These include packages that are not currently present within Spack's own builtin repository as well as packages that would require significant or unacceptable upstream changes.
+
+For instance Chaco, a mesh partitioner developed at Sandia, is an upstream package that has not seen active development for many years and does not have a Spack package\footnote{or at least didn't when the project started}.
+We have created a modified PETSc Spack package that can install and link against this Chaco package for use with Firedrake.
+Another change to the PETSc package was to modify the upstream URL to track the Firedrake fork of PETSc, such a change could not be incrperated into the builtin Spack PETSc package, which necessitated its duplication in our own repository.
+One important contribution of this eCSE was a modification to the Spack builtin PETSc package to allow for inheritance and modification of the the built in PETSc package for use in separate Spack repos.
+
+The Spack package also supports all the same functionality as the Firedrake install script including installing additional pacakges, specifying the MPI to use for dependencies and allowing foll customisation of PETSc build options.
+All this functionality fits into the Spack spec ``language'' for specifying versions and options for packages.
+
+Furthermore the Firedrake Spack package includes additional functionality that cannot be added to script.
+One additional feature is using system packages and more importantly modules as part of a Firedrake build.
+Another is the ability to specify the compiler for the whole toolchain.
+When the Firedrake installation script is used packages are not all guaranteed to use the same compiler.
+
+To achieve the latter point modifications had to be made to the PyOP2 package, which handles the compilation stage of the code generation within Firedrake.
+The result of these modifications is much cleaner handling of compilers within PyOP2.
+The changes allows end users to customise the compiler and compiler flags used with PyOP2 y creating new Python compiler classes, as well as allowing the default compiler classes to be overridden by environment variables.
+These environment variables can be automatically set when Spack loads the firedrake environment.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{New installation procedure}
+\label{ssec:new}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Assumning that Spack has been correctly configured as described in \cref{ssec:spack} Firedrake can be installed by adding the Firedrake managed Spack repo and creating a Spack env, which is comparable to a virtual environment in Python.
+
+\begin{lstlisting}
+spack repo add ~/firedrake-spack
+spack env create -d firedrake
+spack env activate firedrake
+spack add py-firedrake@develop %gcc ^mpich ^openblas
+spack install
+\end{lstlisting}
+
+Extensive instructions are currently held in a working document (currently available on \href{https://hackmd.io/Sg3fYXuCTl61d_LAg4QnMw}{hackmd}), which will be added to the \href{https://github.com/firedrakeproject/firedrake/wiki}{Firedrake wiki} and we hope to contribute these instructions and instructions for using Spack to the \href{https://docs.archer2.ac.uk/}{ARCHER2 documentation} site.
+
+To install Firedrake on ARCHER2 (with the correct modules loaded as described in the working documentation) a user simply invokes
+\begin{lstlisting}
+spack add py-firedrake@develop \
+    %gcc@10.2.0 \
+    ^python@3.9.4.1 \
+    ^cray-mpich@8.1.9%gcc@10.2.0 \
+    ^cray-libsci@21.04.1.1
+\end{lstlisting}
+in place of line 4 in the previous listing.
+The spec more precisely determines the compiler version, the Cray distribution of MPICH and the Cray Scientific Libraries (in place of OpenBLAS).
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Launch utility}
+\label{sec:launch}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Originally we envisioned a launch utility that would handle process distribution (like \verb`mpiexec`), process pinning (like \verb`likwid-pin`) as well as improving dynamically linked library load time (like \verb`spindle`).
+
+Such a tool would prevent commands such as
+\begin{lstlisting}
+spindle --x \
+    likwid-pin -N:0-128\
+        mpiexec -n 1024 -ppn 128 -bind-to \
+            python -B -m memory_profiler\
+                my_script.py -pc_mg_log -log_view :my_script.txt:ascii_flamegraph
+\end{lstlisting}
+
+It was decided against creating a generic runscript as
+mashing all the options together would be confusing
+There are many providers for some tools MPI providers
+functionality overlap (aprun and likwid)
+
+
+It is worth highlighting the difference that Spindle makes to initialising Firedrake and other Python scripts on ARCHER2.
+Spindle describes itself as ``a tool for improving the library-loading performance of dynamically linked HPC applications.`` 
+
+\begin{lstlisting}
+spindle mpirun -n 1024 python my_script.py
+\end{lstlisting}
+
+During the testing of this tool it has become apparent that it would be of great benefit to have this too installed system-wide on ARCHER2.
+Our build of Spindle relies on a Spack installation.
+However, being Python based, Spack also suffers from the Python init problem.
+Loading Spindle from Spack defeats the gains achieved by the tool and to get the above results care was taken to run the Spindle executable without using the Spack infrastructure, by invoking Spindle using it's absolute path on the filesystem.
+This approach isn't particularly user friendly and we see no reason why the package couldn't be installed system wide as a module.
+This approach would also speed up the invocation of any Spack commands as a consequence!
+
+\begin{lstlisting}
+spindle spack env activate ./firedrake
+\end{lstlisting}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Singularity}
+\label{sec:singularity}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lstlisting}
+singularity pull firedrake-vanilla.sif docker://firedrakeproject/firedrake-vanilla
+\end{lstlisting}
+
+\begin{lstlisting}
+singularity build --sandbox ./firedrake-vanilla docker://firedrakeproject/firedrake-vanilla
+singularity build firedrake-vanilla.sif ./firedrake-vanilla
+\end{lstlisting}
+
+Hybrid or Bind Model
+
+Making a generic container seems beyond Singularity's current capabilities
+Version must be compatible
+Must use same process management mechanism
+Cannot take advantage of local hardware drivers
+PETSc must be invoked with same MPI it was built with ruling out Bind Model.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Other Achievements}
+\label{sec:other}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Prior to the start of this eCSE the Firedrake team observed an issue with Python's garbage collection when used with PETSc.
+Specifically when running under MPI and Python objects created using petsc4py are allowed to be cleaned up by the cyclic garbage collector, simulations can deadlock.
+Whilst ARCHER2 isn't the first platform on which this problem has been observed, with the combination of high core core count per job an number of Python objects created by algorithms of interest mean a high prevalence of the issue during previous research.
+
+A portion of eCSE time has been spent devising a fix for parallel garbage collection and adding this feature to PETSc.
+
+
+\end{document}
