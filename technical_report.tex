@@ -253,14 +253,17 @@ spindle --x \
                 my_script.py -pc_mg_log -log_view :my_script.txt:ascii_flamegraph
 \end{lstlisting}
 
-It was decided against creating a generic runscript as
-mashing all the options together would be confusing
-There are many providers for some tools MPI providers
-functionality overlap (aprun and likwid)
+We decided against creating a generic runscript as placing all the different options together would serve no purpose.
+Such a utility may also cause further issues due to providers for some tools MPI providers and functionality overlap between different tools (aprun and likwid for instance perform process placement differently).
 
+It is worth highlighting the difference that Spindle makes to initialising Firedrake on ARCHER2 as it replaces a rather ad-hoc method of overcoming slow Python initialisation.
+When Python starts under MPI each rank must touch each shared library that the Python interpreter and any imported libraries depend on, creating massive network filesystem contention.
+To avoid this, we can tarball the whole Firedrake install and unpack the tarball on each node.
+Whilst effective, the solution is inelegant, and the user must include code for unpacking the tarballs into their jobscript.
 
-It is worth highlighting the difference that Spindle makes to initialising Firedrake and other Python scripts on ARCHER2.
-Spindle describes itself as ``a tool for improving the library-loading performance of dynamically linked HPC applications.`` 
+To avoid tarballing the whole installation (>6GB when all dependencies are included) we use Spindle.
+Spindle describes itself as ``a tool for improving the library-loading performance of dynamically linked HPC applications.``
+
 
 \begin{lstlisting}
 spindle mpirun -n 1024 python my_script.py
