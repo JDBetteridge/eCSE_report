@@ -3,14 +3,15 @@
 \usepackage{mathtools}
 \usepackage{amssymb}
 \usepackage{hyperref}
-\usepackage{cleveref}
 \usepackage[cm]{fullpage}
 \usepackage{fancyhdr}
 \usepackage[ddmmyyyy]{datetime} 
 \usepackage[]{graphicx}
+\usepackage[ruled]{algorithm2e}
 \usepackage{hhline}
 \usepackage{listings}
 \usepackage{enumitem}
+\usepackage{cleveref}
 \usepackage{todonotes}
 
 %\renewcommand{\familydefault}{\sfdefault}
@@ -161,6 +162,13 @@ Many special configuration cases have been coded into the \verb`firedrake-instal
 The issue 
 For the end user the completed installation on their system is a Python virtual environment, which is self contained as much as possible.
 This is the desktop user experience that we aim to recreate with the Spack package manager for HPC users.
+
+\begin{figure}[htp]
+	\centering
+	\includegraphics[width=\textwidth]{firedrake_deps.png}
+	\caption{A directed graph showing the complexity of Firedrake's dependencies. Firedrake is highlighted at the top in red, Python as dark green and Python packages as light green. The orange circle is PETSc and all remaining pale blue circles are compiled dependencies. The command:\\ \texttt{spack graph -d py-firedrake \%gcc \^{}mpich \^{}openblas \textgreater{} py-firedrake.dot}}
+	\label{fig:fddeps}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Aims}
@@ -342,35 +350,37 @@ To test the portability of the Spack installer, it has also been successfully te
 	\item HPC facilities at UCL
 	\item Numerous end users personal machines, comprising different architectures
 \end{itemize} 
-An additional configuration is being developed that utilises the Nvidia compilers, to maximise performance on ARM hardware and will no doubt be useful in the future work porting Firedrake to GPUs as part of the road to exascale code generation.
+An additional configuration is being developed that utilises the NVidia compilers, to maximise performance on ARM hardware and will no doubt be useful in the future work porting Firedrake to GPUs as part of the road to exascale code generation.
+
+We would like to acknowledge the help of Connor Ward who helped with the initial generation of some of the Spack packages used as part of this work.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\clearpage
-\section{Singularity}
-\label{sec:singularity}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{lstlisting}[numbers=none]
-singularity pull firedrake-vanilla.sif docker://firedrakeproject/firedrake-vanilla
-\end{lstlisting}
-
-\begin{lstlisting}
-singularity build --sandbox ./firedrake-vanilla docker://firedrakeproject/firedrake-vanilla
-singularity build firedrake-vanilla.sif ./firedrake-vanilla
-\end{lstlisting}
-
-Hybrid or Bind Model
-
-Making a generic container seems beyond Singularity's current capabilities
-Version must be compatible
-Must use same process management mechanism
-Cannot take advantage of local hardware drivers
-PETSc must be invoked with same MPI it was built with ruling out Bind Model.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Optimisation}
-\label{ssec:optimisation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \clearpage
+% \section{Singularity}
+% \label{sec:singularity}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \begin{lstlisting}[numbers=none]
+% singularity pull firedrake-vanilla.sif docker://firedrakeproject/firedrake-vanilla
+% \end{lstlisting}
+% 
+% \begin{lstlisting}
+% singularity build --sandbox ./firedrake-vanilla docker://firedrakeproject/firedrake-vanilla
+% singularity build firedrake-vanilla.sif ./firedrake-vanilla
+% \end{lstlisting}
+% 
+% Hybrid or Bind Model
+% 
+% Making a generic container seems beyond Singularity's current capabilities
+% Version must be compatible
+% Must use same process management mechanism
+% Cannot take advantage of local hardware drivers
+% PETSc must be invoked with same MPI it was built with ruling out Bind Model.
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Optimisation}
+% \label{ssec:optimisation}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Originally we envisioned a launch utility that would handle process distribution (like \verb`mpiexec`), process pinning (like \verb`likwid-pin`) as well as improving dynamically linked library load time (like \verb`spindle`).
 %
 %Such a tool would prevent commands such as
@@ -411,27 +421,77 @@ PETSc must be invoked with same MPI it was built with ruling out Bind Model.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\clearpage
-\section{Other Achievements}
+\section{Clean up of parallel objects in PETSc}
 \label{sec:other}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Prior to the start of this eCSE we observed an issue when running Firedrake in parallel.
 When running on ARCHER2 (and other HPC facilities) jobs would randomly hang, with no apparent cause.
 On repeating the same job, it may then complete with no hang.
 
-The cause was determined to be Python's garbage collector.
-Specifically, when running under MPI, Python objects created using petsc4py are allowed to be cleaned up by the cyclic garbage collector, causing simulations can deadlock.
-This happens because petsc4py objects are distributed across ranks and as such require synchronised destructon, but Python not being MPI aware calls the garbage collector at different times on different ranks.
+The source of this issue was determined to be Python's garbage collector.
+Specifically when running under MPI, Python objects created using petsc4py are allowed to be cleaned up by the cyclic garbage collector, causing simulations to deadlock.
+This happens because petsc4py objects are distributed across ranks and as such require synchronised destructon, but Python is not MPI aware and calls the garbage collector at different times on different ranks.
 
-Whilst ARCHER2 isn't the first platform on which this problem has been observed, with the combination of high core core count per job an number of Python objects created by algorithms of interest mean a high prevalence of the issue during previous research.
+Whilst ARCHER2 isn't the first platform on which this problem has been observed, the combination of high core count per job and large number of Python objects created in certain algorithms meant a high prevalence of the issue during.
 The problem is very relevant to this eCSE as it affects both the scalability and robustness of Firedrake.
-Since the issue only occurs in parallel, and the more MPI ranks used the higher the chance one python instance calls the garbage collector out of turn means that any HPC platform is vunerable to this issue.
+Since the issue only occurs in parallel, and the more MPI ranks used the higher the chance one Python instance calls the garbage collector out of turn means that any HPC platform is vulnerable to this issue.
 Furthermore, it can result extreme costs for HPC users as deadlocks do not terminate jobscripts.
 Instead it will waste all the Compute Units (CUs) assigned to a particular job and waste a lot of an end users time trying to track down the cause of the deadlock.
 
-Fix
+The solution we present performs the job of the cyclic garbage collector safely for Single Program Multiple Data (SPMD) programs.
+This is done in three stages:
+\begin{enumerate}
+	\item \label{item:create}\textbf{Creation} (Synchronous)
+	At object instantiation the current number of objects associated with the current communicator is attained and incremented.
+	This creation index is associated with that object for its lifetime.
+	\item \label{item:destroy}\textbf{Delayed destruction}(Non-synchronous)
+	At object destruction a reference to the underlying struct is held and added to a garbage hashmap using the creation index as the key.
+	The memory is not yet freed as a reference to the struct persists.
+	Since this step is non-synchronous it can safely be called at any time by Python's garbage collector.
+	\item \label{item:cleanup}\textbf{Cleanup}(Synchronous)
+	A cleanup routine is periodically called on all ranks within the communicator to deallocate the memory occupied by the structs present in the garbage hashmap 
+	\begin{itemize}[topsep=0pt, partopsep=0pt, itemsep=1pt, parsep=1pt]
+	\item \emph{that have been destroyed on all ranks,}
+	\item \emph{and in ascending creation index order}.
+    \end{itemize}
+    \Cref{alg:cleanup} outlines the procedure used for this step.
+\end{enumerate}
 
-Outcome
+\begin{algorithm}[htp]
+	\SetKwBlock{Function}{cleanup(comm)}{return}
+	\Function(){
+		garbage = getGarbage(comm)\\
+		sorted\_keys = sort(garbage.keys())\\
+		intersection = gatherIntersect(comm, sorted\_keys)\\
+		\For{\emph{key in intersection}}{
+			object = garbage.get(key)\\
+			object.collectiveDestroy()\\
+			garbage.remove(key)
+		}
+	}
+	\caption[]{Parallel garbage collection function}
+	\label{alg:cleanup}
+\end{algorithm}
+
+\begin{figure}[htb]
+	\centering
+	\includegraphics[width=\textwidth]{D100BS128B_222.png}
+	\vspace{-1em}
+	\caption{}
+	\label{fig:perf_comp}
+\end{figure}
+
+These changes are completely transparent to the end user, when this fix gets merged into PETSc no changes will need to be made to existing codes.
+At this point Firedrake scripts will no longer hang in parallel due to the garbage collection issue, preventing wasted resources when running jobs.
+By merging this fix into upstream PETSc, it will benefit all petsc4py users, not just Firedrake users.
+
+Preliminary results indicate that the fix will have little impact on the performance of code after the fix is merged.
+\Cref{fig:perf_comp} shows the time to create 100 distributed objects (bulk time) and the time taken to clean up the memory from the objects when they have been destroyed (cleanup time).
+These times are presented for two different methods, the two plots on the left are indicative of the performance before the fix and experiments are prone to hang, the plots on the right show the performance with the fix implemented.
+Two lines are shown on each plot, the time to create/destroy the objects with a cold cache (simply labelled `time') and time to create/destroy the objects on a second run with populated Python caches (labelled `time warm').
+
+The techniques used in this improvement to PETSc/petsc4py will be explored in an upcoming publication.
+
 
 
 
