@@ -2,6 +2,7 @@
 
 \usepackage{mathtools}
 \usepackage{amssymb}
+\usepackage{hyperref}
 \usepackage[cm]{fullpage}
 \usepackage{fancyhdr}
 \usepackage[ddmmyyyy]{datetime} 
@@ -72,6 +73,11 @@
   % show the filename of files included with \lstinputlisting; also try caption instead of title
 }
 
+\hypersetup{
+	colorlinks=true,
+	urlcolor=blue
+}
+
 \title{\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\\
 \Large ARCHER2-eCSE04-5}
 \author{Jack Betteridge}
@@ -81,7 +87,7 @@
 \pagestyle{fancy}
 \setlength{\headheight}{15pt}
 \setlength{\headsep}{5pt}
-\lhead{ \fancyplain{}{\today{}} }
+\lhead{ \fancyplain{}{} }
 \rhead{ \fancyplain{}{Jack Betteridge} }
 %\lhead[\footnotesize\nouppercase{\leftmark}]{}
 %\rhead[]{\footnotesize\nouppercase{\rightmark}}
@@ -90,10 +96,12 @@
 \cfoot[-- \thepage\ --]{-- \thepage\ --}
 
 \begin{document}
-\maketitle
+%\maketitle
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Introduction}
+\begin{center}\huge\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\end{center}
+\section*{}
 \label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%
     A summary of the science that will benefit from the eCSE. Describe any potential impact. Why is this work of value to society?
@@ -102,8 +110,34 @@
     Include any relevant publications
     If at all possible, please provide an image. 
 
+Spack (\url{https://spack.io/}) is a package manager specifically designed for HPC users for installing popular software packages.
+We have created a package for Spack to install Firedrake (\url{https://firedrakeproject.org/}), an automated system for the solution of partial differential equations using the finite element method (FEM) and sophisticated code generation.
+Through this work we have developed a workflow for using Spack on ARCHER2, which can be utilised by any HPC user.
+Packages within Spack have been improved, updated and contributed back to the Spack project, which make packages easier to install on ARCHER2.
+This work will benefit all users of ARCHER2 who wish to install packages not provided already on the system.
+In addition, additional Firedrake dependencies have had Spack packages developed or modified to allow for the easy installation of Firedrake.
+Furthermore, we have created Spack packages for some applications that themselves depend on Firedrake, so that users of these tools can install the software and immediately start doing science, these include (amongst others):
+\begin{itemize}
+	\item \textbf{Gusto} a Firedrake dynamical core toolkit for weather modelling.
+	\item \textbf{Thetis} an unstructured grid coastal ocean model.
+	\item \textbf{Icepack} a package for solving the equations of motion of glacier flow using Firedrake.
+\end{itemize}
+The availability of a Spack package will save huge amounts of person time performing bespoke Firedrake installations and even allows for system level installations, where Spack is centrally supported.
 
+\begin{figure}[htp]
+	\centering
+	\includegraphics[width=\textwidth]{firedrake_deps.png}
+	\caption{A directed graph showing the complexity of Firedrake's dependencies. Firedrake is highlighted at the top in red, Python as dark green and Python packages as light green. The orange circle is PETSc and all remaining pale blue circles are compiled dependencies. The command:\\ \texttt{spack graph -d py-firedrake \%gcc \^{}mpich \^{}openblas \textgreater{} py-firedrake.dot}}
+	\label{fig:fddeps}
+\end{figure}
 
+Docker is a popular container environment for users on their own local machines, but is not suitabel for HPC environments as it allows for privilege escalation.
+Singularity is installed as a module on ARCHER2 but it is not possible for users to build their own images
+We have developed a Singularity image for Firedrake based of the Firedrake Docker images
+Tested them to make sure they are suitable for use on ARCHER2
+This will allow users who are not interested in developing Firedrake, but just run Firedrake based applications to run on ARCHER2 without having to install.
+
+PETSc is a key Firedrake dependency...
 
 
 
