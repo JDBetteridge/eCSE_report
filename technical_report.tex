@@ -117,7 +117,7 @@
 \label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Firedrake is an automated system for the solution of partial differential equations using the finite element method (FEM) and sophisticated code generation.
-The goal for this project was to make installing and running the Firedrake framework\cite{firedrakeweb,firedrakepaper}, and its many dependencies, simple and robust on any HPC platform, with a primary focus on ARCHER2.
+The goal for this project was to make installing and running the Firedrake framework\cite{firedrakeweb,firedrakepaper} --- and its many dependencies --- simple and robust on any HPC platform, with a primary focus on ARCHER2.
 We are confident in stating that this has been accomplished.
 Whilst there is still maintenance and upkeep of the devised solutions we have largely achieved what we set out to accomplish in this eCSE.
 
@@ -153,15 +153,15 @@ The \verb`firedrake-install` command is a custom written Python script which can
 
 Command line arguments can be used to specify the MPI distribution, an existing PETSc build if the user didn't want Firedrake to build its own, which BLAS/LAPACK libraries to link against and any other additional packages the user may want to install.
 Much of the work done by this install script was to overcome limitations in each dependency's own build system.
-It is important for Firedrake that everything is built using the same MPI distribution, if the wrong distribution gets initialised by a package, PETSc will not be able to start.
+It is important for Firedrake that everything is built using the same MPI distribution, since if the wrong distribution gets initialised by a package, PETSc will not be able to start.
 For instance, if \verb`mpi4py` is built against OpenMPI and PETSc uses MPICH, the installation is broken.
-This is quite a common situation for other projects, but for Firedrake things are further complicated by dependencies in Python packages.
+This is quite a common situation for other projects, but for Firedrake the situation is further complicated by dependencies in Python packages.
 For instance, PETSc and Numpy must both be linked against the same BLAS/LAPACK libraries, to prevent a FORTRAN ABI mismatch.
 If PETSc builds against a system install of NETLIB BLAS/LAPACK and Numpy uses the OpenBLAS bundled inside a pre-built wheel, again the installation is broken.
 
-Many special configuration cases have been coded into the \verb`firedrake-install` script to ensure that, on as many systems that we know about, the user is left with a working Firedrake installation.
+Many special configuration cases have been coded into \verb`firedrake-install` to ensure that, on systems that we are aware of users targeting, the script generates a working Firedrake environment.
 The issue on HPC is when installation fails, users may be forced to rewrite parts on the installation script for the system they are on in order to get installation to succeed.
-For the end user the completed installation on their system is a Python virtual environment, which is self contained as much as possible.
+For the end user the completed installation on their system is a Python virtual environment, which is as self--contained as much as possible.
 This is the desktop user experience that we aim to recreate with the Spack package manager for HPC users.
 
 \begin{figure}[htp]
@@ -180,7 +180,7 @@ From the outset we wanted any alternative installation to satisfy the following 
 	\item To produce a working Firedrake installation on HPC machines.
 	\item To have the same (or as similar as possible) functionality to a regular script based Firedrake installation.
 	\item The new installation should require as little manual intervention as possible and should not require editing installation scripts or packages to succeed.
-	\item Fit entirely into the chosen (Spack) framework. That is not to require additional functionality that isn't present in the existing framework.
+	\item Fit entirely into the chosen (Spack) framework. That is, not to require additional functionality that isn't present in the existing framework.
 	\item To make the installation more extensible and better compatible with external and alternative package providers, as are often present on HPC.
 \end{enumerate}
 
@@ -202,7 +202,7 @@ Importantly, if there is no system installation of Spack, these steps can be per
 Spack even supports ``chaining'' installations, where one instance of Spack can use the packages from another instance.
 This will initially be very useful to us, as package updates that we have contributed are not yet in a versioned Spack release and many HPC systems will not update system modules unless there is a pressing reason to do so.
 
-It's essential that a working Python interpreter is loaded as Spack is a Python program, the OS Python is often not sufficient as it is often out of date and missing key internal components which prevent Spack from working correctly.
+It is essential that a working Python interpreter is loaded as Spack is a Python program, the OS Python is often not sufficient --- often out of date and missing key internal components which prevent Spack from working correctly.
 It is our recommendation to load a Python module (such as \verb`cray-python` on ARCHER2) if it is available before calling the spack activation script.
 After the activation step any Spack command can be invoked at the command line and users can start installing packages.
 
@@ -218,13 +218,13 @@ On a supercomputer we wish to make use of specific optimised compilers, MPI dist
 Spack allows users to utilise this software, usually available as modules, through extensive configuration options.
 
 The file
-\footnote{\texttt{\$SPACK\_USER\_CONFIG} if not explicitly set will default to \texttt{\~{}/.spack}. This may cause issues if you attempt to build packages on a computer node of ARCHER2 as the default home directory is not mounted.}
+\footnote{\texttt{\$SPACK\_USER\_CONFIG} if not explicitly set, will default to \texttt{\~{}/.spack}. This may cause issues if you attempt to build packages on a computer node of ARCHER2 as the default home directory is not mounted.}
 \verb`$SPACK_USER_CONFIG/<system>/compilers.yaml` is read by Spack to determine what additional compilers are available on the system.
 On ARCHER2 we initially populated this file by running the command:
 \begin{lstlisting}[numbers=none]
 spack compiler find	
 \end{lstlisting}
-Spack does a reasonable job of populating this file with the correct compiler specs as well as appropriate compiler flags and even configures the correct modules to load to use the compilers.
+Spack does a reasonable job of populating this file with the correct compiler specs as well as appropriate compiler flags, and even configures the correct modules to load to use the compilers.
 It is still worth checking this file carefully, as any error here may require all packages built with that compiler to be rebuilt.
 
 A similar trick can be used to populate \verb`$SPACK_USER_CONFIG/packages.yaml`, which is read by spack to determine additional packages that can be used.
@@ -233,7 +233,7 @@ However,
 spack external find	
 \end{lstlisting}
 only picks up build dependencies (tools like Bison, m4, git and tar), not the modules available on the system.
-Care must be taken to add \verb`cray-mpich` as the MPI provider along with a suitable spec line, additional modules to load, the prefix path and tag the package as not buildable by Spack.
+Care must be taken to add \verb`cray-mpich` as the MPI provider along with a suitable spec line, additional modules to load, the prefix path, as well as tag the package as not buildable by Spack.
 The same procedure must be done for the BLAS and LAPACK provider (\verb`cray-libsci`) and the Python module, if they are desired as build dependencies, otherwise Spack will build its own copy.
 
 Setting this up may be daunting for a user, but is possible to have a centrally installed instance of Spack or a centrally managed global Spack configuration (one that is overridden by the user's configuration, if desired).
@@ -254,7 +254,7 @@ In order to isolate the packages for the Firedrake installation in the same way 
 This gives a very similar end user experience for anyone who has previously installed Firedrake using the install script.
 It also allows for packages to be added in the environment, with a prefix under the environment directory, giving a developer the same freedom to make changes to packages, whilst keeping all the core dependencies in one place.
 
-The environment is created, activated and populated with the core packaged by executing:
+The environment is created, activated and populated with the core packages by executing:
 \begin{lstlisting}
 spack env create -d ./firedrake
 spack env activate -p ./firedrake
@@ -284,7 +284,7 @@ A key contribution from this eCSE was the modification of the builtin PETSc pack
 This now allows other projects to create alternative PETSc installs using the Spack builtin as a parent class.
 Chaco, Eigen, NetCDF and parallel NetCDF have been included as options in the Firedrake PETSc Spack package, since these libraries need to be linked against for a working installation.
 
-Chaco, a mesh partitioner developed at Sandia, is an upstream package that has not seen active development for many years and did not previously have a Spack package\footnote{or at least didn't when the project started}, so this is also included in the Firedrake package repo.
+Chaco, a mesh partitioner developed at Sandia, is an upstream package that has not seen active development for many years and did not previously have a Spack package\footnote{At least it didn't when the project started}, so this is also included in the Firedrake package repo.
 
 In \cref{ssec:prev} it was mentioned that Numpy (and Scipy) need to be linked against the same BLAS and LAPACK providers as PETSc to allow both to be imported in Python.
 This eCSE expanded the number of different BLAS/LAPACK implementations that Numpy could build against as options in Spack.
@@ -292,7 +292,7 @@ This enables compatibility with both the AMD Optimizing CPU Libraries and Cray s
 Additional logic has also been added to the Scipy package to ensure that it too is built with the same BLAS/LAPACK as Numpy.
 These changes have been merged into the development branch of Spack for the benefit of all Spack users.
 
-To allow for the use of different compilers in Spack modifications had to be made to the PyOP2 package, which handles the compilation stage of the code generation within Firedrake.
+To allow for the use of different compilers in Spack, modifications had to be made to the PyOP2 package (which handles the compilation stage of the code generation within Firedrake).
 Refactoring allows end users to customise the compiler and compiler flags used with PyOP2 by creating new Python compiler classes, as well as allowing the default compiler classes to be overridden by environment variables.
 These environment variables can be automatically set when Spack loads the Firedrake environment.
 Now by default PyOP2 will use the same compiler that Spack used to build the rest of the Firedrake dependency tree.
@@ -325,7 +325,7 @@ spack add py-firedrake@develop %gcc ^mpich ^openblas
 spack install
 \end{lstlisting}
 
-On ARCHER2, Firedrake can be configured with gcc, Cray Python, the Cray Scientific Libraries and Cray MPICH (if have been added to the list of external packages) using the command in \cref{lst:spackarcher2}.
+On ARCHER2, Firedrake can be configured with GCC, Cray Python, the Cray Scientific Libraries and Cray MPICH (if these have been added to the list of external packages) using the command in \cref{lst:spackarcher2}.
 \begin{lstlisting}[float,caption={Spack configuration for ARCHER2 using GCC, Cray Python, Cray MPICH and Cray scientific libraries},label={lst:spackarcher2}]
 spack add py-firedrake@develop \
     %gcc@10.2.0 \
@@ -334,15 +334,16 @@ spack add py-firedrake@develop \
     ^cray-libsci@21.04.1.1
 spack install
 \end{lstlisting}
-Furthermore the Firedrake Spack package includes additional functionality that cannot be added to script.
-One additional feature is using system packages and more importantly system modules as part of a Firedrake build.
+Furthermore the Firedrake Spack package includes additional functionality that cannot be added to the script.
+One additional feature is using system packages --- and more importantly system modules --- as part of a Firedrake build.
 Another is the ability to specify the compiler for the whole toolchain.
 When the Firedrake installation script is used packages are not all guaranteed to use the same compiler.
 Changes to the PyOP2 package, as noted in \cref{ssec:changes}, make it possible for Spack to set the default compiler for PyOP2 to use for code generation when the Spack environment is activated.
 
 Extensive instructions are currently held in a working document (currently available on \href{https://hackmd.io/Sg3fYXuCTl61d_LAg4QnMw}{hackmd}), which will be added to the \href{https://github.com/firedrakeproject/firedrake/wiki}{Firedrake wiki}\cite{firedrakewiki} and we hope to contribute these instructions and instructions for using Spack to the \href{https://docs.archer2.ac.uk/}{ARCHER2 documentation}\cite{archer2docs} site.
 
-To test the portability of the Spack installer, it has also been successfully tested on different platforms:
+To test the portability of the Spack installer, it has also been successfully tested on several platforms.
+These include:
 \begin{itemize}[topsep=2pt, partopsep=0pt, itemsep=1pt, parsep=1pt]
 	\item Tier 2 HPC facility Isambard (XCI ThunderX2)
 	\item HPC facilities at Imperial College
@@ -395,14 +396,14 @@ Any of the Firedrake Docker images listed above can be converted using \cref{lst
 When configuring the image for running under MPI, there is a choice of hybrid or bind model.
 In the bind model the container has no MPI installation and instead the host system MPI is mounted within the container (AKA binding) and all packages in the image are linked against this MPI.
 Such a model is not suitable for Firedrake as it would require too many changes.
-We wouldn't be able to start from the Docker image, as these require an MPI installation to work, and this would necessitate building the Singularity image from scratch.
-Building from scratch is also not really an option, since this process requires ARCHER2 to use the Cray's MPICH would need to be performed with administrative permissions (which we cannot have).
+We would not be able to start from the Docker image, as these require an MPI installation to work, and this would necessitate building the Singularity image from scratch.
+Building from scratch is also not an option, since this process requires ARCHER2 to use the Cray's MPICH and would also need to be performed with administrative permissions (which we cannot have).
 
-Instead we use the hybrid model, which is recommended in the ARCHER2 container course, involves using the MPI executable from the host.
+Instead we use the hybrid model, which is recommended in the ARCHER2 container course, which involves using the MPI executable from the host.
 The application in the container is linked against and uses the MPI installation within the container which has the ability to communicate with the MPI daemon process running on the host system.
 
 With the image built we can begin running applications in the Singularity container.
-Following ARCHER2 documentation\cite{archer2docs}, we use \verb` cray-mpich-abi` in place of \verb`cray-mpich` and set the environment variables \verb`SINGULARITYENV_LD_LIBRARY_PATH` and \verb`SINGULARITY_BIND` appropriately.
+Following ARCHER2 documentation\cite{archer2docs,archer2course}, we use \verb` cray-mpich-abi` in place of \verb`cray-mpich` and set the environment variables \verb`SINGULARITYENV_LD_LIBRARY_PATH` and \verb`SINGULARITY_BIND` appropriately.
 This enables additional Cray libraries and hardware specific device libraries to be found by executables inside the container.
 %\begin{lstlisting}
 %export SINGULARITYENV_LD_LIBRARY_PATH=
@@ -437,7 +438,7 @@ Care must therefore be taken to additionally bind any directories where scripts 
 
 In the following example the \verb`--home` argument binds the current working directory (\verb`$PWD`) as the \verb`$HOME` directory for the container, overriding the default behaviour.
 Additionally, the current working directory is bound to the mount point \verb`/home/firedrake/work`, using \verb`--bind` so that scripts can be found when running in the container and results can be saved.
-The choice of these mount locations can be changed by the user to the location of their scripts, results directories and possibly as "home space" located under the \verb`/work` directory as needed.
+The choice of these mount locations can be changed by the user to the location of their scripts, results directories and possibly as ``home space'' located under the \verb`/work` directory as needed.
 Finally, the Python installed in the \verb`firedrake` user's home directory is used to execute a script in the bound directory \verb`/home/firedrake/work/`.
 
 \begin{lstlisting}
@@ -450,6 +451,19 @@ Whilst there are a lot of options here, it gives the end user complete control o
 Furthermore, using a container involves no installation for the user, just configuration.
 
 !!!Performance comparison!!!
+\begin{figure}[htp]
+	\centering
+	\includegraphics[width=\textwidth]{strong.png}
+	\vspace{-1em}
+	\caption{}
+	\label{fig:sing_perf}
+\end{figure}
+Container between X\% and Y\% difference with bare metal.
+Certain solvers perform better than others.
+Direct solvers close to bare metal performance, scalable solvers like multigrid seem to fare worse.
+Internode communication is clearly the biggest issue.
+Only tried with OFI, may see a difference with UCX network, although this is undocumented.
+Further investigations are required.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -459,7 +473,7 @@ Furthermore, using a container involves no installation for the user, just confi
 Prior to the start of this eCSE we observed an issue when running Firedrake in parallel.
 When running on ARCHER2 (and other HPC facilities) jobs would randomly hang, with no apparent cause.
 On repeating the same job, it may then complete with no hang.
-Fixing the issue involved adding additional functionality to PETSc, the Portable, Extensible Toolkit for Scientific Computation\cite{petsc}.
+Fixing the issue involved adding additional functionality to PETSc, which is tightly coupled to Firedrake and provides sophisticated, programmable solvers\cite{petsc}.
 
 The source of this issue was determined to be Python's garbage collector.
 Specifically when running under MPI, Python objects created using petsc4py are allowed to be cleaned up by the cyclic garbage collector, causing simulations to deadlock.
@@ -467,7 +481,7 @@ This happens because petsc4py objects are distributed across ranks and as such r
 
 Whilst ARCHER2 isn't the first platform on which this problem has been observed, the combination of high core count per job and large number of Python objects created in certain algorithms meant a high prevalence of the issue during our previous simulations.
 The problem is very relevant to this eCSE as it affects both the scalability and robustness of Firedrake.
-Since the issue only occurs in parallel, and the more MPI ranks used the higher the chance one Python instance calls the garbage collector out of turn means that any HPC platform is vulnerable to this issue.
+Since the issue only occurs in parallel, and the chance that one Python instance calls the garbage collector out of turn increases with the number of MPI ranks used, any HPC platform is vulnerable to this issue.
 Furthermore, it can result extreme costs for HPC users as deadlocks do not terminate jobscripts.
 Instead it will waste all the Compute Units (CUs) assigned to a particular job and waste a lot of an end users time trying to track down the cause of the deadlock.
 
@@ -482,11 +496,7 @@ This is done in three stages:
 	The memory is not yet freed as a reference to the struct persists.
 	Since this step is non-synchronous it can safely be called at any time by Python's garbage collector.
 	\item \label{item:cleanup}\textbf{Cleanup}(Synchronous)
-	A cleanup routine is periodically called on all ranks within the communicator to deallocate the memory occupied by the structs present in the garbage hashmap 
-	\begin{itemize}[topsep=0pt, partopsep=0pt, itemsep=1pt, parsep=1pt]
-	\item \emph{that have been destroyed on all ranks,}
-	\item \emph{and in ascending creation index order}.
-    \end{itemize}
+	A cleanup routine is periodically called on all ranks within the communicator to deallocate the memory occupied by the structs present in the garbage hashmap that \emph{have been destroyed on all ranks} and \emph{in ascending creation index order}.
     \Cref{alg:cleanup} outlines the procedure used for this step.
 \end{enumerate}
 
@@ -534,12 +544,69 @@ The techniques used in this improvement to PETSc/petsc4py will be explored in an
 \subsection{Spindle}
 \label{ssec:spindle}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Originally we envisioned a launch utility that would handle process distribution (like \verb`mpiexec`), process pinning (like \verb`likwid-pin`) as well as improving dynamically linked library load time (like \verb`spindle`).
+
+Such a tool would prevent commands such as
+\begin{lstlisting}
+spindle --x \
+    likwid-pin -N:0-128\
+        mpiexec -n 1024 -ppn 128 -bind-to \
+            python -B -m memory_profiler\
+                my_script.py -pc_mg_log -log_view :my_script.txt:ascii_flamegraph
+\end{lstlisting}
+
+We decided against creating a generic runscript as placing all the different options together would serve no purpose.
+Such a utility may also cause further issues due to providers for some tools MPI providers and functionality overlap between different tools (aprun and likwid for instance perform process placement differently).
+
+Unfortunately, we were unable to get Spindle\cite{spindlepaper,spindleweb} to work on ARCHER2.
+Installing via Spack did not produce a useable program, more system configuration was required.
+Manually installing threw up further issues.
+Firstly, Spindle is not compatible with the version of SLURM installed on ARCHER2.
+While the installation can continue and there are suggested workaround flags for SLURM, the workaround is ineffective and Spindle does not work correctly.
+Secondly, the configuration of Spindle seems to depend on certain communication features of the system that may or not be disabled for security on ARCHER2.
+
+Spindle is an interesting package that we may investigate in the future.
+We cannot bundle it as a user installable component of Firedrake, but it may be of interest to the ARCHER2 CSE team as a tool to improve library loading.
+Such a tool would need to be provided as a system installation to be truly effective.
+
+An ad hoc alternative to Spindle is outlined in \cref{ssec:tarball}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Tarballing}
 \label{ssec:tarball}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+One method that we can use to prevent large jobs thrashing the network filesystem is to create installations (either a Spack install or script based install) in a directory in \verb`/tmp`.
+When the installation is complete the whole environment can be stored compressed as a single tarball file somewhere under the \verb`/work` directory.
+This modification to the installation is shown in \cref{lst:A1}.
+
+\begin{lstlisting}[float,caption={Modified steps in Spack installation, showing installation under \texttt{/tmp} and tarballing the installation at the end (other steps elided)},label={lst:A1}]
+...
+mkdir -p /tmp/$USER
+spack env create -d /tmp/$USER/firedrake
+spack env activate -p /tmp/$USER/firedrake
+...
+spack install --fail-fast 2>&1 | tee $SPACK_ENV/spack-firedrake-install.log
+tar -czvf /work/PRJ/PRJ/$USER/firedrake.tar.gz /tmp/$USER/firedrake
+\end{lstlisting}
+
+It is advantageous to tarball the environment as this single file can be sent to all compute nodes at run time (once per node) and then each rank per node can load files from the local filesystem or ramdisk.
+This is in contrast to all ranks on all nodes trying to read from the network filesystem, which causes a bottleneck.
+On ARCHER2 each node has 128 physical cores, which have to share just 2 network cards.
+By predistributing the environment the load on the network filesystem at initialisation time is reduced by a factor of 128.
+
+\begin{lstlisting}[float,caption={Modified steps in running script under Spack, untarballing the installation before activating the environment},label={lst:A2}]
+source /work/PRJ/PRJ/$USER/spack/share/spack/setup-env.sh
+srun --ntasks-per-node 1 tar -xzf /work/PRJ/PRJ/$USER/firedrake.tar.gz -C /tmp/$USER
+spack env activate /tmp/$USER/firedrake-env/gcc
+python myScript.py
+\end{lstlisting}
+
+However, installing in this manner makes modifying the installation cumbersome as the tarball must be unpacked to \verb`/tmp`, before any changes can be made to the installation.
+Once changes are made, it is also necessary to re-tarball the whole installation, overwriting the original tarball.
+This is not an ideal solution for developers or for end users due to the extra work involved to modify and activate the environment.
+We are actively seeking an alternative method to replace tarballing the whole environment.
+
 
 \bibliographystyle{abbrv}
 \bibliography{references}
