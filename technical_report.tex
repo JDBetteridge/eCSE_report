@@ -83,6 +83,8 @@
 	allcolors=blue
 }
 
+\crefname{figure}{figure}{figures}
+
 \title{\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\\
 \Large ARCHER2-eCSE04-5}
 \author{Jack Betteridge}
@@ -450,20 +452,29 @@ srun --ntasks-per-node 128  \
 Whilst there are a lot of options here, it gives the end user complete control over what locations on the ARCHER2 system are available for reading and writing by the container.
 Furthermore, using a container involves no installation for the user, just configuration.
 
-!!!Performance comparison!!!
 \begin{figure}[htp]
 	\centering
 	\includegraphics[width=\textwidth]{strong.png}
 	\vspace{-1em}
-	\caption{}
+	\caption{Strong scaling plot with a comparison of bare metal simulations (solid lines) and containerised simulations (dashed lines) for two different solvers. The CG solver with AMG incurs a 30--40\% overhead running in a container on all but the 8 node simulation, the matrix free solver with GMG performs better with an 8--15\% overhead on 1--4 nodes.}
 	\label{fig:sing_perf}
 \end{figure}
-Container between X\% and Y\% difference with bare metal.
-Certain solvers perform better than others.
-Direct solvers close to bare metal performance, scalable solvers like multigrid seem to fare worse.
-Internode communication is clearly the biggest issue.
-Only tried with OFI, may see a difference with UCX network, although this is undocumented.
-Further investigations are required.
+During multinode performance testing the Singularity container takes longer to execute simulations than when the same simulations are run on bare metal, as would be expected.
+From the experiments certain solvers perform better than others inside the container.
+Direct solvers seem to perform well and are close to bare metal performance, but are not scalable so cannot be used for large problems.
+However, scalable solvers of interest like multigrid seem to fare worse, although not terribly as \cref{fig:sing_perf} illustrates.
+We postulate that this is due to way in which hierarchical solvers (like multigrid) are using MPI communicators within PETSc and it is the overhead of using certain operations in the containerised MPI installation that cause the slowdown.
+
+\Cref{fig:sing_perf} shows a comparison between two of the solvers used for performance testing on 1--8 nodes of ARCHER2.
+The details of the solvers are not important for this discussion, but the conjugate gradient solver with algebraic multigrid preconditioning (CG + AMG) runs with a 30-40\% overhead inside the container and a matrix free CG solver with telescoping geometric multigrid preconditioning (Matfree CG + telescoped GMG) runs with only an 8-15\% overhead.
+On 8 nodes this situation is reversed, but this may be due to the tuning of the solvers for the specific problem size (notice that there are only 32000 degrees of freedom per core on 8 nodes in this experiment).
+For these tests we believe that this is an acceptable overhead, but we aim to improve it in the future.
+It may unfortunately be the case that solvers require slightly different tuning for a containerised build compared to a bare metal installation.
+
+Internode communication is clearly the biggest issue for the performance of solvers within containers, single node tests show very little overhead from using the Singularity container.
+We have only tried building a Singularity with the OpenFabrics network layer and we may yet see a difference with UCX network layer, although the configuration of such a container is undocumented.
+Further investigations into the best configuration is required, but rebuilding containers with a PETSc built with different options inside is incredibly time consuming.
+For now Singularity containers provide a zero installation route to using Firedrake, even if there is a small penalty to simulation performance.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
