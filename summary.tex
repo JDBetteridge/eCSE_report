@@ -81,7 +81,7 @@
 
 \title{\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\\
 \Large ARCHER2-eCSE04-5}
-\author{Jack Betteridge}
+\author{Jack Betteridge, Patrick Farrell, David Ham}
 \date{30/4/2022}
 % PI: Dr David A Ham (Imperial College) 
 
@@ -89,7 +89,7 @@
 \setlength{\headheight}{15pt}
 \setlength{\headsep}{5pt}
 \lhead{ \fancyplain{}{} }
-\rhead{ \fancyplain{}{Jack Betteridge} }
+\rhead{ \fancyplain{}{JB, PF, DH} }
 %\lhead[\footnotesize\nouppercase{\leftmark}]{}
 %\rhead[]{\footnotesize\nouppercase{\rightmark}}
 
@@ -102,6 +102,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{center}\huge\textsc{Scalable and robust Firedrake deployment on ARCHER2 and beyond}\end{center}
+\begin{center}\large{Jack Betteridge, Patrick E. Farrell, David A. Ham}\end{center}
 \section*{}
 \label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%
@@ -111,7 +112,7 @@
 % Include any relevant publications
 % If at all possible, please provide an image.
 Spack (\url{https://spack.io/}) is a package manager specifically designed for installing popular software on HPC.
-We have created a package for Spack to install Firedrake (\url{https://firedrakeproject.org/}), an automated system for the solution of partial differential equations using the finite element method (FEM) and sophisticated code generation.
+We have created a package for Spack to install Firedrake (\url{https://firedrakeproject.org/}), an automated system for the solution of partial differential equations using the finite element method and sophisticated code generation.
 Through this work we have developed a workflow for using Spack on ARCHER2, which can be utilised by any HPC user.
 Packages within Spack have been improved, updated and contributed back to the Spack project, which makes packages easier to install on ARCHER2.
 This work will benefit all users of ARCHER2 who wish to install packages not provided already on the system.
@@ -134,11 +135,11 @@ The availability of a Spack package will save huge amounts of person time perfor
 Docker is a popular container environment for users on their own local machines, but is not suitable for HPC environments as it allows for privilege escalation.
 Singularity is an alternative to Docker designed for HPC and is installed as a module on ARCHER2, but it is not possible for users to build their own images from scratch.
 We have developed a Singularity image for Firedrake based on the Firedrake Docker images so that end users who do not wish to modify the Firedrake source can have a zero installation route to running their Firedrake scripts.
-These singularity images have been tested to make sure they are suitable for use on ARCHER2 and remain performant.
+These Singularity images have been tested to make sure they are suitable for use on ARCHER2 and remain performant.
 
 PETSc is a key Firedrake dependency and provides a lot of the solvers used for simulations.
 During the course of the eCSE we identified a parallel deadlock bug, which occurs when Python tries to clean up memory belonging to petsc4py on some ranks, but not others.
-The frequency of this bug occurring increases with the number of MPI ranks, meaning it is more prevalent when running on large HPC facilities, like ARCHER2.
+The frequency of this bug occurring increases with the number of MPI ranks, meaning it is more prevalent when running on large HPC facilities (like ARCHER2).
 We have designed an algorithm for the safe parallel collection of distributed Python objects, like those found in petsc4py.
 An implementation of this algorithm has been contributed to PETSc to prevent deadlock occurring when using PETSc in combination with other memory managed languages, such as Python or Julia.
 
